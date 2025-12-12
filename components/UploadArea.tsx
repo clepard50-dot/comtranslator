@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 
 interface UploadAreaProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect: (files: File[]) => void;
 }
 
 const UploadArea: React.FC<UploadAreaProps> = ({ onFileSelect }) => {
@@ -21,21 +21,24 @@ const UploadArea: React.FC<UploadAreaProps> = ({ onFileSelect }) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      validateAndPass(e.dataTransfer.files[0]);
+      validateAndPass(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      validateAndPass(e.target.files[0]);
+      validateAndPass(Array.from(e.target.files));
     }
   };
 
-  const validateAndPass = (file: File) => {
-    if (file.type.startsWith('image/') || file.type === 'application/pdf') {
-      onFileSelect(file);
+  const validateAndPass = (files: File[]) => {
+    const validFiles = files.filter(file => 
+      file.type.startsWith('image/') || file.type === 'application/pdf'
+    );
+    if (validFiles.length > 0) {
+      onFileSelect(validFiles);
     } else {
-      alert('Please upload an image or PDF file.');
+      alert('Please upload image or PDF files.');
     }
   };
 
@@ -59,6 +62,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({ onFileSelect }) => {
         ref={inputRef}
         onChange={handleChange}
         accept="image/*,application/pdf"
+        multiple
         className="hidden"
       />
       

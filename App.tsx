@@ -99,8 +99,8 @@ const App: React.FC = () => {
   }, [pages, isTranslating, sourceLang, targetLang, userApiKey]);
 
 
-  const handleFileSelect = useCallback(async (selectedFile: File) => {
-    setFile(selectedFile);
+  const handleFileSelect = useCallback(async (selectedFiles: File[]) => {
+    setFile(selectedFiles[0]); // Keep first file for display purposes
     setError(null);
     setPages([]);
     setIsTranslating(false);
@@ -108,15 +108,18 @@ const App: React.FC = () => {
     try {
       let extractedImages: string[] = [];
 
-      if (selectedFile.type === 'application/pdf') {
-        extractedImages = await convertPdfToImages(selectedFile);
-      } else {
-        const reader = new FileReader();
-        const imagePromise = new Promise<string>((resolve) => {
-          reader.onload = (e) => resolve(e.target?.result as string);
-        });
-        reader.readAsDataURL(selectedFile);
-        extractedImages = [await imagePromise];
+      for (const selectedFile of selectedFiles) {
+        if (selectedFile.type === 'application/pdf') {
+          const pdfImages = await convertPdfToImages(selectedFile);
+          extractedImages.push(...pdfImages);
+        } else {
+          const reader = new FileReader();
+          const imagePromise = new Promise<string>((resolve) => {
+            reader.onload = (e) => resolve(e.target?.result as string);
+          });
+          reader.readAsDataURL(selectedFile);
+          extractedImages.push(await imagePromise);
+        }
       }
 
       const newPages: PageData[] = extractedImages.map((img, idx) => ({
@@ -130,7 +133,7 @@ const App: React.FC = () => {
 
     } catch (err: any) {
       console.error(err);
-      setError("Failed to load file. If it's a PDF, ensure it is not password protected or corrupted.");
+      setError("Failed to load file(s). If it's a PDF, ensure it is not password protected or corrupted.");
       setFile(null);
     }
   }, []);
@@ -218,15 +221,17 @@ const App: React.FC = () => {
                       <h3 className="font-semibold text-white">Source File</h3>
                       <button onClick={handleReset} className="text-xs text-red-400 hover:text-red-300">Remove</button>
                    </div>
-                   <div className="flex items-center space-x-3 mb-6 bg-gray-900/50 p-2 rounded border border-gray-800">
-                      <div className="h-10 w-10 bg-brand-900 text-brand-400 rounded flex items-center justify-center shrink-0">
-                        {file.type === 'application/pdf' ? 'PDF' : 'IMG'}
-                      </div>
-                      <div className="overflow-hidden">
-                         <p className="text-xs truncate text-gray-300 font-medium" title={file.name}>{file.name}</p>
-                         <p className="text-[10px] text-gray-500">{pages.length} Page{pages.length !== 1 ? 's' : ''}</p>
-                      </div>
-                   </div>
+             <div className="flex items-center space-x-3 mb-6 bg-gray-900/50 p-2 rounded border border-gray-800">
+               <div className="h-10 w-10 bg-brand-900 text-brand-400 rounded flex items-center justify-center shrink-0">
+                {file && file.type === 'application/pdf' ? 'PDF' : 'IMG'}
+               </div>
+               <div className="overflow-hidden">
+                 <p className="text-xs truncate text-gray-300 font-medium" title={file ? file.name : ''}>
+                  {file && pages.length <= 1 ? file.name : `${pages.length} Page${pages.length !== 1 ? 's' : ''}`}
+                 </p>
+                 <p className="text-[10px] text-gray-500">{pages.length} Page{pages.length !== 1 ? 's' : ''}</p>
+               </div>
+             </div>
 
                    <div className="space-y-4 mb-6">
                       <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Configuration</h4>
@@ -300,6 +305,27 @@ const App: React.FC = () => {
               ref={pagesContainerRef}
               className="lg:col-span-9 flex flex-col w-full bg-black/20"
             >
+              {/* Thumbnail strip for quick navigation (minimal implementation) */}
+              {pages.length > 1 && (
+                <div className="w-full overflow-x-auto py-3 px-4 bg-gray-900/40 border-b border-gray-800">
+                  <div className="flex space-x-3 items-center">
+                    {pages.map((p, i) => (
+                      <button
+                        key={`thumb-${p.id}-${i}`}
+                        onClick={() => {
+                          const el = document.getElementById(`page-${i}`);
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }}
+                        className="flex-shrink-0 rounded overflow-hidden border border-gray-800 hover:scale-105 transition-transform"
+                        style={{ width: 100, height: 140 }}
+                        title={`Page ${i + 1}`}
+                      >
+                        <img src={p.originalImage} alt={`Page ${i + 1}`} className="w-full h-full object-cover block" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {pages.map((page, index) => (
                 <PageCard 
                   key={page.id} 
