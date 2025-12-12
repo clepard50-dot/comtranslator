@@ -1,0 +1,5 @@
+{
+  "name": "KomaTranslator",
+  "description": "A powerful comic and manga translator powered by Gemini. Upload any comic page, select languages, and instantly receive a translated version with edited speech bubbles.",
+  "requestFramePermissions": []
+}
