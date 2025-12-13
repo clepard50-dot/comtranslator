@@ -3,14 +3,7 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
-    // loadEnv reads from .env files in the directory
     const env = loadEnv(mode, '.', '');
-    
-    // Priority: 1) Shell env var (for CI), 2) .env file, 3) empty string
-    // In GitHub Actions, process.env.GEMINI_API_KEY is set from secrets
-    // Locally, env.GEMINI_API_KEY comes from .env.local file
-    const geminiApiKey = process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || '';
-    
     return {
       base: '/comtranslator/',
       server: {
@@ -30,8 +23,8 @@ export default defineConfig(({ mode }) => {
         },
       },
       define: {
-        'process.env.API_KEY': JSON.stringify(geminiApiKey),
-        'process.env.GEMINI_API_KEY': JSON.stringify(geminiApiKey)
+        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
       },
       resolve: {
         alias: {
