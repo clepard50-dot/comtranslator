@@ -18,8 +18,14 @@ const App: React.FC = () => {
   const [isTranslating, setIsTranslating] = useState(false);
   const [globalViewMode, setGlobalViewMode] = useState<ViewMode>('split');
   const [userApiKey, setUserApiKey] = useState<string>('');
+  const [debugLog, setDebugLog] = useState<string[]>([]);
   
   const pagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Debug helper
+  const addDebug = (msg: string) => {
+    setDebugLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+  };
 
   // Load API Key from storage
   useEffect(() => {
@@ -61,6 +67,11 @@ const App: React.FC = () => {
       const page = pages[pageIndex];
 
       try {
+        addDebug(`Starting translation for page ${pageIndex + 1}`);
+        addDebug(`userApiKey: ${userApiKey ? 'SET' : 'NOT SET'}, process.env.API_KEY: ${process.env.API_KEY ? 'SET' : 'NOT SET'}`);
+        const keyToUse = userApiKey || '';
+        addDebug(`Passing key to translateComicPage: ${keyToUse ? `"${keyToUse.slice(0,8)}..."` : '<empty string, will use process.env>'}`);
+        
         const bubbles = await translateComicPage(
           page.originalImage, 
           sourceLang, 
@@ -68,6 +79,7 @@ const App: React.FC = () => {
           userApiKey
         );
 
+        addDebug(`SUCCESS! Got ${bubbles.length} bubbles`);
         setPages(prev => {
           const next = [...prev];
           next[pageIndex] = { 
@@ -80,6 +92,7 @@ const App: React.FC = () => {
 
       } catch (err: any) {
         console.error(`Error translating page ${pageIndex + 1}`, err);
+        addDebug(`ERROR: ${err.message || err.toString()}`);
         setPages(prev => {
           const next = [...prev];
           next[pageIndex] = { ...next[pageIndex], status: AppStatus.ERROR };
@@ -191,6 +204,26 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-comic-bg text-gray-100 font-sans selection:bg-brand-500 selection:text-white">
       <Header onApiKeyChange={handleApiKeyChange} hasKey={!!userApiKey || !!process.env.API_KEY} />
+
+      {/* DEBUG PANEL */}
+      <div className="bg-yellow-900/80 border-b border-yellow-600 p-4 text-xs font-mono">
+        <div className="max-w-7xl mx-auto">
+          <h3 className="font-bold text-yellow-300 mb-2">🔧 DEBUG PANEL (remove after testing)</h3>
+          <div className="grid grid-cols-2 gap-4 mb-2">
+            <div>
+              <p><span className="text-yellow-400">process.env.API_KEY:</span> {process.env.API_KEY ? `"${process.env.API_KEY.slice(0, 10)}...${process.env.API_KEY.slice(-4)}" (${process.env.API_KEY.length} chars)` : '<NOT SET>'}</p>
+              <p><span className="text-yellow-400">process.env.GEMINI_API_KEY:</span> {process.env.GEMINI_API_KEY ? `"${process.env.GEMINI_API_KEY.slice(0, 10)}...${process.env.GEMINI_API_KEY.slice(-4)}" (${process.env.GEMINI_API_KEY.length} chars)` : '<NOT SET>'}</p>
+              <p><span className="text-yellow-400">userApiKey (from UI/localStorage):</span> {userApiKey ? `"${userApiKey.slice(0, 10)}...${userApiKey.slice(-4)}" (${userApiKey.length} chars)` : '<NOT SET>'}</p>
+              <p><span className="text-yellow-400">Effective key will be:</span> {userApiKey ? 'userApiKey' : process.env.API_KEY ? 'process.env.API_KEY' : '<NONE - will fail>'}</p>
+            </div>
+            <div className="bg-black/30 p-2 rounded max-h-32 overflow-y-auto">
+              <p className="text-yellow-400 mb-1">Log:</p>
+              {debugLog.length === 0 ? <p className="text-gray-500">No logs yet. Try translating...</p> : null}
+              {debugLog.map((log, i) => <p key={i} className="text-green-300">{log}</p>)}
+            </div>
+          </div>
+        </div>
+      </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
